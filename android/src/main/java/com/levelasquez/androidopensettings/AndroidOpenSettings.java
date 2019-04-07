@@ -1,21 +1,33 @@
 package com.levelasquez.androidopensettings;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.Settings;
+import android.content.pm.PackageManager;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.ActivityEventListener;
+import com.facebook.react.bridge.BaseActivityEventListener;
+import com.facebook.react.bridge.Promise;
 
 public class AndroidOpenSettings extends ReactContextBaseJavaModule {
 
+    private static final int CHECK_PERMISSION = 1000;
+
     private ReactContext reactContext;
+    private Callback mCallback;
+    private Promise mPromise;
+    private String mPermission;
 
     public AndroidOpenSettings(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
+        reactContext.addActivityEventListener(mActivityEventListener);
     }
 
     @Override
@@ -32,7 +44,7 @@ public class AndroidOpenSettings extends ReactContextBaseJavaModule {
             reactContext.startActivity(intent);
         }
     }
-    
+
     @ReactMethod
     public void homeSettings() {
         Intent intent = new Intent(Settings.ACTION_HOME_SETTINGS);
@@ -44,13 +56,16 @@ public class AndroidOpenSettings extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void appDetailsSettings() {
+    public void appDetailsSettings(String permission, final Promise promise) {
+        mPermission = permission;
+        mPromise = promise;
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         intent.setData(Uri.parse("package:" + reactContext.getPackageName()));
         if (intent.resolveActivity(reactContext.getPackageManager()) != null) {
-            reactContext.startActivity(intent);
+            Activity currentActivity = getCurrentActivity();
+            if (currentActivity != null) {
+                currentActivity.startActivityForResult(intent, CHECK_PERMISSION);
+            }
         }
     }
 
@@ -231,4 +246,21 @@ public class AndroidOpenSettings extends ReactContextBaseJavaModule {
             reactContext.startActivity(intent);
         }
     }
+
+    private final ActivityEventListener mActivityEventListener = new BaseActivityEventListener() {
+        @Override
+        public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent intent) {
+            if (requestCode == CHECK_PERMISSION) {
+                if (mPromise != null) {
+                    int result = reactContext.checkSelfPermission(mPermission);
+                    if (result == PackageManager.PERMISSION_GRANTED) {
+                        mPromise.resolve(mPermission + " is granted");
+                    }
+                    else {
+                        mPromise.reject(mPermission + " is not granted", Integer.toString(result));
+                    }
+                }
+            }
+        }
+    };
 }

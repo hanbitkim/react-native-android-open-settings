@@ -1,4 +1,17 @@
-import { NativeModules } from 'react-native'
+import {NativeModules, PermissionsAndroid} from 'react-native'
+
+const permissionTypes = {
+  location: PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+  camera: PermissionsAndroid.PERMISSIONS.CAMERA,
+  microphone: PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+  contacts: PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+  event: PermissionsAndroid.PERMISSIONS.READ_CALENDAR,
+  storage: PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+  photo: PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+  callPhone: PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+  readSms: PermissionsAndroid.PERMISSIONS.READ_SMS,
+  receiveSms: PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+}
 
 const { RNAndroidOpenSettings } = NativeModules
 
@@ -6,7 +19,17 @@ const generalSettings = () => RNAndroidOpenSettings.generalSettings()
 
 const homeSettings = () => RNAndroidOpenSettings.homeSettings()
 
-const appDetailsSettings = () => RNAndroidOpenSettings.appDetailsSettings()
+const appDetailsSettings = (permission) => {
+  return new Promise((resolve, reject)=> {
+    RNAndroidOpenSettings.appDetailsSettings(permissionTypes[permission])
+        .then(() => {
+          return resolve('authorized');
+        })
+        .catch(() => {
+          return reject();
+        })
+  });
+}
 
 const wifiSettings = () => RNAndroidOpenSettings.wifiSettings()
 
